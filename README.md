@@ -1,6 +1,10 @@
 # LibCluster Cluster.Strategy.EC2Tag
 This clustering strategy relies on Amazon EC2 Tags as well as EPMD to find hosts, and then uses
-the `:net_adm` module to connect to nodes on those hosts
+the `:net_adm` module to connect to nodes on those hosts.
+
+It also supports setting multiple toplogies, and will choose which one to use based off the current
+host_name and tags found. For example if your current node has the tags that match one topology, they
+will be considered to be part of that topology and attempt to connect into that mesh
 
 ***Note: This module requires [ExAws](https://github.com/ex-aws/ex_aws) to be configured***
 
