@@ -31,12 +31,7 @@ config :libcluster, :topologies, [
     config: [
       tag_name: "Backend Group",
       tag_value: ~r/(user|account) Frontend/i,
-      filter_fn: fn %{"tagSet" => %{"item" => tags}} ->
-        case Enum.find(tags, &(&1["name"] === "Name")) do
-          nil -> false
-          %{"value" => value} -> value === "Learn Elixir Lander"
-        end
-      end
+      filter_fn: {MyHelper, :filter_instances}
     ]
   ],
 
@@ -46,7 +41,7 @@ config :libcluster, :topologies, [
       tag_name: "Backend Group",
       tag_value: "Data Nodes",
       region: "us-east-2",
-      filter_node_names: fn node -> node =~ "my_node@host-00.&"
+      filter_node_names: {MyHelper, :filter_node_names}
     ]
   ],
 
@@ -56,12 +51,29 @@ config :libcluster, :topologies, [
       tag_name: "Backend Group",
       tag_value: "Extra Nodes",
       region: "us-east-2",
-      host_name_fn: fn ec2_instance ->
-        # This comes from ExAws.EC2 describe_instances
-        # By default we use the `instanceId`
-        ec2_instance["privateDns"]
-      end
+      host_name_fn: {MyHelper, :host_name}
     ]
   ]
 ]
+```
+
+```elixir
+defmodule MyHelper do
+  def filter_instances(%{"tagSet" => %{"item" => tags}}) do
+    case Enum.find(tags, &(&1["name"] === "Name")) do
+      nil -> false
+      %{"value" => value} -> value === "Learn Elixir Lander"
+    end
+  end
+
+  def filter_node_names(node) do
+    node =~ "my_node@host-00.&"
+  end
+
+  # This comes from ExAws.EC2 describe_instances
+  # By default we use the `instanceId`
+  def host_name(ec2_instance) do
+    ec2_instance["privateDns"]
+  end
+end
 ```

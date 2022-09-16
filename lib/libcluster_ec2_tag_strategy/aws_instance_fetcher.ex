@@ -14,11 +14,19 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
             end)
           end)
           |> maybe_filter_by_option(filter_fn)
-          |> Enum.map(host_name_fn || &(&1["instanceId"]))
+          |> Enum.map(maybe_call_host_name_fn(host_name_fn))
           |> then(&{:ok, &1})
 
       {:error, reason} -> {:error, ErrorMessage.failed_dependency("failing to find aws instances by region", %{reason: reason})}
     end
+  end
+
+  defp maybe_call_host_name_fn({module, function}) do
+    &apply(module, function, [&1])
+  end
+
+  defp maybe_call_host_name_fn(_) do
+    &(&1["instanceId"])
   end
 
   defp fetch_aws_instances(region) do
@@ -31,12 +39,12 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
     instances
   end
 
-  defp maybe_filter_by_option(instances, filter_fn) when is_function(filter_fn, 1) do
-    Enum.filter(instances, filter_fn)
+  defp maybe_filter_by_option(instances, {module, function}) do
+    Enum.filter(instances, &apply(module, function, [&1]))
   end
 
   defp maybe_filter_by_option(_instances, _) do
-    raise "For some reason, :filter_fn being passed to Cluster.Strategy.EC2Tag is not a single arity function"
+    raise "For some reason, :filter_fn being passed to Cluster.Strategy.EC2Tag is not a {module, function} tuple"
   end
 
   defp ex_aws_request(request_struct, nil) do
