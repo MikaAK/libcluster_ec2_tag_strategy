@@ -1,5 +1,5 @@
 defmodule Cluster.Strategy.EC2Tag do
-  @moduledoc "#{File.read!(\"./README.md\")}"
+  @moduledoc "#{File.read!("./README.md")}"
 
   require Logger
 
