@@ -2,7 +2,7 @@
 This clustering strategy relies on Amazon EC2 Tags as well as EPMD to find hosts, and then uses
 the `:net_adm` module to connect to nodes on those hosts
 
-***Note: This module requires [https://github.com/ex-aws/ex_aws](ExAws) to be configured***
+***Note: This module requires [ExAws](https://github.com/ex-aws/ex_aws) to be configured***
 
 ## Installation
 
