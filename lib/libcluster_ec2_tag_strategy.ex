@@ -47,7 +47,8 @@ defmodule Cluster.Strategy.EC2Tag do
       config[:region],
       config[:tag_name],
       config[:tag_value],
-      config[:host_name_fn]
+      config[:host_name_fn],
+      config[:filter_fn]
     ) do
       {:ok, []} -> false
       {:ok, hosts} -> Utils.current_hostname() in hosts

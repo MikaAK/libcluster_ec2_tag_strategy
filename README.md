@@ -30,7 +30,13 @@ config :libcluster, :topologies, [
     strategy: Cluster.Strategy.EC2Tag,
     config: [
       tag_name: "Backend Group",
-      tag_value: ~r/(user|account) Frontend/i
+      tag_value: ~r/(user|account) Frontend/i,
+      filter_fn: fn %{"tagSet" => %{"item" => tags}} ->
+        case Enum.find(tags, &(&1["name"] === "Name")) do
+          nil -> false
+          %{"value" => value} -> value === "Learn Elixir Lander"
+        end
+      end
     ]
   ],
 

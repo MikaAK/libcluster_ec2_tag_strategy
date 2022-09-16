@@ -1,7 +1,7 @@
 defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
   @moduledoc false
 
-  def find_hosts_by_tag(region, tag_name, tag_value, node_name_fn) do
+  def find_hosts_by_tag(region, tag_name, tag_value, host_name_fn, filter_fn) do
     with {:ok, instances} <- fetch_aws_instances(region) do
       instances
         |> Enum.filter(fn %{"tagSet" => %{"item" => tags}} ->
@@ -12,7 +12,8 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
             _ -> false
           end)
         end)
-        |> Enum.map(node_name_fn || &(&1["instanceId"]))
+        |> maybe_filter_by_option(filter_fn)
+        |> Enum.map(host_name_fn || &(&1["instanceId"]))
         |> then(&{:ok, &1})
     end
   end
@@ -21,6 +22,18 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
     ExAws.EC2.describe_instances()
       |> ex_aws_request(region)
       |> handle_describe_response
+  end
+
+  defp maybe_filter_by_option(instances, nil) do
+    instances
+  end
+
+  defp maybe_filter_by_option(instances, filter_fn) when is_function(filter_fn, 1) do
+    Enum.filter(instances, filter_fn)
+  end
+
+  defp maybe_filter_by_option(_instances, _) do
+    raise "For some reason, :filter_fn being passed to Cluster.Strategy.EC2Tag is not a single arity function"
   end
 
   defp ex_aws_request(request_struct, nil) do
