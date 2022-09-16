@@ -5,7 +5,7 @@ defmodule LibclusterEc2TagStrategy.MixProject do
     [
       app: :libcluster_ec2_tag_strategy,
       version: "0.1.0",
-      elixir: "~> 1.14",
+      elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       description: "LibCluster EC2 Tag Strategy to help nodes cluster together with different topologies",
