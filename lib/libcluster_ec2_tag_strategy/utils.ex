@@ -1,4 +1,6 @@
 defmodule Cluster.Strategy.EC2Tag.Utils do
+  require Logger
+
   @moduledoc false
 
   def current_hostname do
@@ -28,10 +30,16 @@ defmodule Cluster.Strategy.EC2Tag.Utils do
   end
 
   def fetch_instances_from_host(hostname) do
-    with {:ok, nodes} <- :net_adm.names(hostname) do
-      {:ok, Enum.map(nodes, fn {name, _port} ->
-        :"#{name}@#{hostname}"
-      end)}
+    case :net_adm.names(hostname) do
+      {:ok, nodes} ->
+        {:ok, Enum.map(nodes, fn {name, _port} ->
+          :"#{name}@#{hostname}"
+        end)}
+
+      {:error, :address} ->
+        Logger.debug("[Cluster.Strategy.EC2Tag] EPMD Not online yet for #{hostname}")
+
+        {:ok, []}
     end
   end
 

@@ -24,7 +24,7 @@ defmodule Cluster.Strategy.EC2Tag do
 
     case Enum.find(topologies, &current_node_in_tag?/1) do
       nil ->
-        Logger.warn("Current node doesn't have any tag name/value pairs that match one of the topologies")
+        Logger.warn("[Cluster.Strategy.EC2Tag] Current node doesn't have any tag name/value pairs that match one of the topologies")
 
         :ignore
 
@@ -48,7 +48,7 @@ defmodule Cluster.Strategy.EC2Tag do
       {:ok, hosts} -> Utils.current_hostname() in hosts
 
       {:error, e} ->
-        Logger.error("Error fetching hosts by tag from amazon\n#{inspect e, pretty: true}")
+        Logger.error("[Cluster.Strategy.EC2Tag] Error fetching hosts by tag from amazon\n#{inspect e, pretty: true}")
 
         false
     end
@@ -72,10 +72,10 @@ defmodule Cluster.Strategy.EC2Tag do
       Cluster.Strategy.connect_nodes(topology, connect, list_nodes, maybe_filter_node_names(nodes, config[:filter_node_name]))
     else
       {:ok, []} ->
-        Logger.error("Cannot find hosts to connect to with the tag name of #{config[:tag_name]} and the value of #{config[:tag_value]}")
+        Logger.error("[Cluster.Strategy.EC2Tag] Cannot find hosts to connect to with the tag name of #{config[:tag_name]} and the value of #{config[:tag_value]}")
 
       {:error, e} ->
-        Logger.error("Error finding hosts for #{config[:tag_name]} with value of #{config[:tag_value]}\n#{inspect e, pretty: true}")
+        Logger.error("[Cluster.Strategy.EC2Tag] Error finding hosts for #{config[:tag_name]} with value of #{config[:tag_value]}\n#{inspect e, pretty: true}")
     end
   end
 
