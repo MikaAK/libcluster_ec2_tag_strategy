@@ -24,6 +24,7 @@ defmodule LibclusterEc2TagStrategy.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:libcluster, "~> 3.3"},
       {:ex_aws, "~> 2.0"},
       {:ex_aws_ec2, "~> 2.0"},
       {:jason, "~> 1.4"},

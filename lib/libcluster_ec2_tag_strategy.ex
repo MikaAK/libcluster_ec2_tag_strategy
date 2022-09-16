@@ -43,13 +43,7 @@ defmodule Cluster.Strategy.EC2Tag do
   end
 
   defp current_node_in_tag?(%State{config: config}) do
-    case AwsInstanceFetcher.find_hosts_by_tag(
-      config[:region],
-      config[:tag_name],
-      config[:tag_value],
-      config[:host_name_fn],
-      config[:filter_fn]
-    ) do
+    case find_hosts_by_tag_for_config(config) do
       {:ok, []} -> false
       {:ok, hosts} -> Utils.current_hostname() in hosts
 
@@ -61,27 +55,37 @@ defmodule Cluster.Strategy.EC2Tag do
   end
 
   defp run_loop(%State{config: config} = state) do
-    attempt_to_connect_to_hosts_by_tag(
-      state,
-      config[:region],
-      config[:tag_name],
-      config[:tag_value]
-    )
+    attempt_to_connect_to_hosts_by_tag(state)
 
     Process.sleep(config[:check_interval] || @default_interval)
     run_loop(state)
   end
 
-  defp attempt_to_connect_to_hosts_by_tag(state, region, tag_name, tag_value) do
-    with {:ok, hosts} when hosts !== [] <- AwsInstanceFetcher.find_hosts_by_tag(region, tag_name, tag_value),
-         {:ok, nodes} <- Utils.fetch_instances_from_host(hostname) do
-      Cluster.Strategy.connect_nodes(state.topology, state.connect_nodes, state.list_nodes, nodes)
+  defp attempt_to_connect_to_hosts_by_tag(%State{
+    config: config,
+    topology: topology,
+    connect: connect,
+    list_nodes: list_nodes
+  }) do
+    with {:ok, hosts} <- find_hosts_by_tag_for_config(config),
+         {:ok, nodes} <- Utils.fetch_instances_from_hosts(hosts) do
+      Cluster.Strategy.connect_nodes(topology, connect, list_nodes, nodes)
     else
       {:ok, []} ->
-        Logger.error("Cannot find hosts to connect to with the tag name of #{tag_name} and the value of #{tag_value}")
+        Logger.error("Cannot find hosts to connect to with the tag name of #{config[:tag_name]} and the value of #{config[:tag_value]}")
 
       {:error, e} ->
-        Logger.error("Cannot find hosts to connect to with the tag name of #{tag_name} and the value of #{tag_value}\n#{inspect e, pretty: true}")
+        Logger.error("Cannot find hosts to connect to with the tag name of #{config[:tag_name]} and the value of #{config[:tag_value]}\n#{inspect e, pretty: true}")
     end
+  end
+
+  defp find_hosts_by_tag_for_config(config) do
+    AwsInstanceFetcher.find_hosts_by_tag(
+      config[:region],
+      config[:tag_name],
+      config[:tag_value],
+      config[:host_name_fn],
+      config[:filter_fn]
+    )
   end
 end
