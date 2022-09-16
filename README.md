@@ -45,7 +45,8 @@ config :libcluster, :topologies, [
     config: [
       tag_name: "Backend Group",
       tag_value: "Data Nodes",
-      region: "us-east-2"
+      region: "us-east-2",
+      filter_node_names: fn node -> node =~ "my_node@host-00.&"
     ]
   ],
 

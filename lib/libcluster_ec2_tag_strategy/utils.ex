@@ -13,8 +13,13 @@ defmodule Cluster.Strategy.EC2Tag.Utils do
       |> Enum.map(&fetch_instances_from_host/1)
       |> reduce_status_tuples
 
-    with {:ok, hosts} <- res do
-      {:ok, List.flatten(hosts)}
+    case res do
+      {:ok, hosts} -> {:ok, List.flatten(hosts)}
+      {:error, e} ->
+        {:error, ErrorMessage.failed_dependency(
+          "failed to get instances from hosts",
+          %{details: e}
+        )}
     end
   end
 

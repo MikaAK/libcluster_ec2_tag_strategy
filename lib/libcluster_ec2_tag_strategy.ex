@@ -69,13 +69,21 @@ defmodule Cluster.Strategy.EC2Tag do
   }) do
     with {:ok, hosts} <- find_hosts_by_tag_for_config(config),
          {:ok, nodes} <- Utils.fetch_instances_from_hosts(hosts) do
-      Cluster.Strategy.connect_nodes(topology, connect, list_nodes, nodes)
+      Cluster.Strategy.connect_nodes(topology, connect, list_nodes, maybe_filter_node_names(nodes, config))
     else
       {:ok, []} ->
         Logger.error("Cannot find hosts to connect to with the tag name of #{config[:tag_name]} and the value of #{config[:tag_value]}")
 
       {:error, e} ->
-        Logger.error("Cannot find hosts to connect to with the tag name of #{config[:tag_name]} and the value of #{config[:tag_value]}\n#{inspect e, pretty: true}")
+        Logger.error("Error finding hosts for #{config[:tag_name]} with value of #{config[:tag_value]}\n#{inspect e, pretty: true}")
+    end
+  end
+
+  defp maybe_filter_node_names(nodes, config) do
+    if is_function(config[:filter_node_names], 1) do
+      config[:filter_node_names].(nodes)
+    else
+      nodes
     end
   end
 

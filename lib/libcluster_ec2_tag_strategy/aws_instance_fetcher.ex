@@ -2,19 +2,22 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
   @moduledoc false
 
   def find_hosts_by_tag(region, tag_name, tag_value, host_name_fn, filter_fn) do
-    with {:ok, instances} <- fetch_aws_instances(region) do
-      instances
-        |> Enum.filter(fn %{"tagSet" => %{"item" => tags}} ->
-           Enum.any?(tags, fn
-            %{"key" => ^tag_name, "value" => ^tag_value} -> true
-            %{"key" => ^tag_name, "value" => value} when is_list(tag_value) -> value in tag_value
-            %{"key" => ^tag_name, "value" => value} when is_struct(tag_value, Regex) -> Regex.match?(tag_value, value)
-            _ -> false
+    case fetch_aws_instances(region) do
+      {:ok, instances} ->
+        instances
+          |> Enum.filter(fn %{"tagSet" => %{"item" => tags}} ->
+             Enum.any?(tags, fn
+              %{"key" => ^tag_name, "value" => ^tag_value} -> true
+              %{"key" => ^tag_name, "value" => value} when is_list(tag_value) -> value in tag_value
+              %{"key" => ^tag_name, "value" => value} when is_struct(tag_value, Regex) -> Regex.match?(tag_value, value)
+              _ -> false
+            end)
           end)
-        end)
-        |> maybe_filter_by_option(filter_fn)
-        |> Enum.map(host_name_fn || &(&1["instanceId"]))
-        |> then(&{:ok, &1})
+          |> maybe_filter_by_option(filter_fn)
+          |> Enum.map(host_name_fn || &(&1["instanceId"]))
+          |> then(&{:ok, &1})
+
+      {:error, reason} -> {:error, ErrorMessage.failed_dependency("failing to find aws instances by region", %{reason: reason})}
     end
   end
 
