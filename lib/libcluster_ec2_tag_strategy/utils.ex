@@ -2,7 +2,10 @@ defmodule Cluster.Strategy.EC2Tag.Utils do
   @moduledoc false
 
   def current_hostname do
-    String.trim_trailing(to_string(:net_adm.localhost()), ".lan")
+    # Not sure why but this doesn't have an error case
+    {:ok, hostname} = :inet.gethostname()
+
+    to_string(hostname)
   end
 
   def fetch_instances_from_hosts(hostnames) do
