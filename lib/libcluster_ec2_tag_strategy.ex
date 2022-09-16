@@ -1,33 +1,6 @@
 defmodule Cluster.Strategy.EC2Tag do
-  @moduledoc """
-  This clustering strategy relies on Amazon EC2 Tags as well as EPMD to find hosts, and then uses
-  the `:net_adm` module to connect to nodes on those hosts
+  @moduledoc "#{File.read!(\"./README.md\")}"
 
-  ***Note: This module requires [https://github.com/ex-aws/ex_aws](ExAws) to be configured***
-
-  You can have LibCluster automatically connect to nodes that match tags and setup multiple
-  topologies:
-
-  ```elixir
-  config :libcluster, :topologies, [
-    frontend_nodes: [
-      strategy: #{__MODULE__},
-      config: [
-        tag_name: "Backend Group",
-        tag_value: ~r/(user|account) Frontend/i
-      ]
-    ],
-
-    data_nodes: [
-      strategy: #{__MODULE__},
-      config: [
-        tag_name: "Backend Group",
-        tag_value: "Data Nodes"
-      ]
-    ]
-  ]
-  ```
-  """
   require Logger
 
   use Cluster.Strategy
@@ -73,7 +46,8 @@ defmodule Cluster.Strategy.EC2Tag do
     case AwsInstanceFetcher.find_hosts_by_tag(
       config[:region],
       config[:tag_name],
-      config[:tag_value]
+      config[:tag_value],
+      config[:host_name_fn]
     ) do
       {:ok, []} -> false
       {:ok, hosts} -> Utils.current_hostname() in hosts

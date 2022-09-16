@@ -1,4 +1,6 @@
 defmodule Cluster.Strategy.EC2Tag.Utils do
+  @moduledoc false
+
   defp current_hostname do
     String.trim_trailing(to_string(:net_adm.localhost()), ".lan")
   end

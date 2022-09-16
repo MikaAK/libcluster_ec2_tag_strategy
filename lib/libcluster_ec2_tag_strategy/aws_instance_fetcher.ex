@@ -1,5 +1,7 @@
 defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
-  def find_hosts_by_tag(region, tag_name, tag_value, node_name_fn \\ &(&1["instanceId"])) do
+  @moduledoc false
+
+  def find_hosts_by_tag(region, tag_name, tag_value, node_name_fn) do
     with {:ok, instances} <- fetch_aws_instances(region) do
       instances
         |> Enum.filter(fn %{"tagSet" => %{"item" => tags}} ->
@@ -10,7 +12,7 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
             _ -> false
           end)
         end)
-        |> Enum.map(node_name_fn)
+        |> Enum.map(node_name_fn || &(&1["instanceId"]))
         |> then(&{:ok, &1})
     end
   end
