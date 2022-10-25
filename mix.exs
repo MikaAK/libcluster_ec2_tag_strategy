@@ -30,7 +30,9 @@ defmodule LibclusterEc2TagStrategy.MixProject do
       {:jason, "~> 1.4"},
       {:hackney, "~> 1.9"},
       {:elixir_xml_to_map, "~> 2.0"},
-      {:error_message, "~> 0.2"}
+      {:error_message, "~> 0.2"},
+
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
 
@@ -45,7 +47,7 @@ defmodule LibclusterEc2TagStrategy.MixProject do
 
   defp docs do
     [
-      main: "ErrorMessage",
+      main: "Cluster.Strategy.EC2Tag",
       source_url: "https://github.com/MikaAK/libcluster_ec2_tag_strategy"
     ]
   end
