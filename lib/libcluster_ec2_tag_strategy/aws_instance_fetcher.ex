@@ -5,19 +5,30 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
     case fetch_aws_instances(region) do
       {:ok, instances} ->
         instances
-          |> Enum.filter(fn %{"tagSet" => %{"item" => tags}} ->
-             Enum.any?(tags, fn
-              %{"key" => ^tag_name, "value" => ^tag_value} -> true
-              %{"key" => ^tag_name, "value" => value} when is_list(tag_value) -> value in tag_value
-              %{"key" => ^tag_name, "value" => value} when is_struct(tag_value, Regex) -> Regex.match?(tag_value, value)
-              _ -> false
-            end)
-          end)
-          |> maybe_filter_by_option(filter_fn)
-          |> Enum.map(maybe_call_host_name_fn(host_name_fn))
-          |> then(&{:ok, &1})
+        |> Enum.filter(fn %{"tagSet" => %{"item" => tags}} ->
+          Enum.any?(tags, fn
+            %{"key" => ^tag_name, "value" => ^tag_value} ->
+              true
 
-      {:error, reason} -> {:error, ErrorMessage.failed_dependency("failing to find aws instances by region", %{reason: reason})}
+            %{"key" => ^tag_name, "value" => value} when is_list(tag_value) ->
+              value in tag_value
+
+            %{"key" => ^tag_name, "value" => value} when is_struct(tag_value, Regex) ->
+              Regex.match?(tag_value, value)
+
+            _ ->
+              false
+          end)
+        end)
+        |> maybe_filter_by_option(filter_fn)
+        |> Enum.map(maybe_call_host_name_fn(host_name_fn))
+        |> then(&{:ok, &1})
+
+      {:error, reason} ->
+        {:error,
+         ErrorMessage.failed_dependency("failing to find aws instances by region", %{
+           reason: reason
+         })}
     end
   end
 
@@ -26,13 +37,13 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
   end
 
   defp maybe_call_host_name_fn(_) do
-    &(&1["instanceId"])
+    & &1["instanceId"]
   end
 
   defp fetch_aws_instances(region) do
     ExAws.EC2.describe_instances()
-      |> ex_aws_request(region)
-      |> handle_describe_response
+    |> ex_aws_request(region)
+    |> handle_describe_response
   end
 
   defp maybe_filter_by_option(instances, nil) do
@@ -56,10 +67,11 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
   end
 
   defp handle_describe_response({:error, {:http_error, status_code, %{body: body}}}) do
-    {:error, apply(ErrorMessage, ErrorMessage.http_code_reason_atom(status_code), [
-      "error with fetching from aws",
-      %{error_body: body}
-    ])}
+    {:error,
+     apply(ErrorMessage, ErrorMessage.http_code_reason_atom(status_code), [
+       "error with fetching from aws",
+       %{error_body: body}
+     ])}
   end
 
   defp handle_describe_response({:ok, %{body: body}}) do
@@ -68,10 +80,11 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
         {:ok, Enum.map(items, fn %{"instancesSet" => %{"item" => item}} -> item end)}
 
       structure ->
-        {:error, ErrorMessage.bad_request(
-          "couldn't parse the structure from aws correctly",
-          %{structure: structure}
-        )}
+        {:error,
+         ErrorMessage.bad_request(
+           "couldn't parse the structure from aws correctly",
+           %{structure: structure}
+         )}
     end
   end
 end

@@ -8,7 +8,8 @@ defmodule LibclusterEc2TagStrategy.MixProject do
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      description: "LibCluster EC2 Tag Strategy to help nodes cluster together with different topologies",
+      description:
+        "LibCluster EC2 Tag Strategy to help nodes cluster together with different topologies",
       docs: docs(),
       package: package()
     ]
@@ -31,7 +32,6 @@ defmodule LibclusterEc2TagStrategy.MixProject do
       {:hackney, "~> 1.9"},
       {:elixir_xml_to_map, "~> 2.0"},
       {:error_message, "~> 0.2"},
-
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end

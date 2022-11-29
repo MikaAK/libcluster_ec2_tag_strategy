@@ -24,11 +24,14 @@ defmodule Cluster.Strategy.EC2Tag do
 
     case Enum.find(topologies, &current_node_in_tag?/1) do
       nil ->
-        Logger.warn("[Cluster.Strategy.EC2Tag] Current node doesn't have any tag name/value pairs that match one of the topologies")
+        Logger.warn(
+          "[Cluster.Strategy.EC2Tag] Current node doesn't have any tag name/value pairs that match one of the topologies"
+        )
 
         :ignore
 
-      topology -> Task.start_link(fn -> run_loop(topology) end)
+      topology ->
+        Task.start_link(fn -> run_loop(topology) end)
     end
   end
 
@@ -44,11 +47,22 @@ defmodule Cluster.Strategy.EC2Tag do
 
   defp current_node_in_tag?(%State{config: config}) do
     case find_hosts_by_tag_for_config(config) do
-      {:ok, []} -> false
-      {:ok, hosts} -> Utils.current_hostname() in hosts
+      {:ok, []} ->
+        false
+
+      {:ok, hosts} ->
+        # Utils.current_hostname/1 might return hostname with format like this:
+        # ip-10-0-1-1
+        # But hosts' format could be ip-10-0-1-1.ap-southeast-2.compute.internal
+        # So needs to check if the hosts contains any hostname that starts 
+        # with ip-10-0-1-1
+        hostname = Utils.current_hostname()
+        Enum.any?(hosts, &String.starts_with?(&1, hostname))
 
       {:error, e} ->
-        Logger.error("[Cluster.Strategy.EC2Tag] Error fetching hosts by tag from amazon\n#{inspect e, pretty: true}")
+        Logger.error(
+          "[Cluster.Strategy.EC2Tag] Error fetching hosts by tag from amazon\n#{inspect(e, pretty: true)}"
+        )
 
         false
     end
@@ -62,20 +76,29 @@ defmodule Cluster.Strategy.EC2Tag do
   end
 
   defp attempt_to_connect_to_hosts_by_tag(%State{
-    config: config,
-    topology: topology,
-    connect: connect,
-    list_nodes: list_nodes
-  }) do
+         config: config,
+         topology: topology,
+         connect: connect,
+         list_nodes: list_nodes
+       }) do
     with {:ok, hosts} <- find_hosts_by_tag_for_config(config),
          {:ok, nodes} <- Utils.fetch_instances_from_hosts(hosts) do
-      Cluster.Strategy.connect_nodes(topology, connect, list_nodes, maybe_filter_node_names(nodes, config[:filter_node_name]))
+      Cluster.Strategy.connect_nodes(
+        topology,
+        connect,
+        list_nodes,
+        maybe_filter_node_names(nodes, config[:filter_node_name])
+      )
     else
       {:ok, []} ->
-        Logger.error("[Cluster.Strategy.EC2Tag] Cannot find hosts to connect to with the tag name of #{config[:tag_name]} and the value of #{config[:tag_value]}")
+        Logger.error(
+          "[Cluster.Strategy.EC2Tag] Cannot find hosts to connect to with the tag name of #{config[:tag_name]} and the value of #{config[:tag_value]}"
+        )
 
       {:error, e} ->
-        Logger.error("[Cluster.Strategy.EC2Tag] Error finding hosts for #{config[:tag_name]} with value of #{config[:tag_value]}\n#{inspect e, pretty: true}")
+        Logger.error(
+          "[Cluster.Strategy.EC2Tag] Error finding hosts for #{config[:tag_name]} with value of #{config[:tag_value]}\n#{inspect(e, pretty: true)}"
+        )
     end
   end
 

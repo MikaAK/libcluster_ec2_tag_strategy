@@ -11,17 +11,21 @@ defmodule Cluster.Strategy.EC2Tag.Utils do
   end
 
   def fetch_instances_from_hosts(hostnames) do
-    res = hostnames
+    res =
+      hostnames
       |> Enum.map(&fetch_instances_from_host/1)
       |> reduce_status_tuples
 
     case res do
-      {:ok, hosts} -> {:ok, List.flatten(hosts)}
+      {:ok, hosts} ->
+        {:ok, List.flatten(hosts)}
+
       {:error, e} ->
-        {:error, ErrorMessage.failed_dependency(
-          "failed to get instances from hosts",
-          %{details: e}
-        )}
+        {:error,
+         ErrorMessage.failed_dependency(
+           "failed to get instances from hosts",
+           %{details: e}
+         )}
     end
   end
 
@@ -32,9 +36,10 @@ defmodule Cluster.Strategy.EC2Tag.Utils do
   def fetch_instances_from_host(hostname) do
     case :net_adm.names(hostname) do
       {:ok, nodes} ->
-        {:ok, Enum.map(nodes, fn {name, _port} ->
-          :"#{name}@#{hostname}"
-        end)}
+        {:ok,
+         Enum.map(nodes, fn {name, _port} ->
+           :"#{name}@#{hostname}"
+         end)}
 
       {:error, :address} ->
         Logger.debug("[Cluster.Strategy.EC2Tag] EPMD Not online yet for #{hostname}")
