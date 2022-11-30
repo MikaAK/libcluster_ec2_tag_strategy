@@ -45,7 +45,15 @@ defmodule Cluster.Strategy.EC2Tag do
   defp current_node_in_tag?(%State{config: config}) do
     case find_hosts_by_tag_for_config(config) do
       {:ok, []} -> false
-      {:ok, hosts} -> Utils.current_hostname() in hosts
+
+      {:ok, hosts} ->
+        # Utils.current_hostname/1 might return hostname with format like this:
+        # ip-10-0-1-1
+        # But hosts' format could be ip-10-0-1-1.ap-southeast-2.compute.internal
+        # So needs to check if the hosts contains any hostname that starts
+        # with ip-10-0-1-1
+        hostname = Utils.current_hostname()
+        Enum.any?(hosts, &String.starts_with?(&1, hostname))
 
       {:error, e} ->
         Logger.error("[Cluster.Strategy.EC2Tag] Error fetching hosts by tag from amazon\n#{inspect e, pretty: true}")
