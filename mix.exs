@@ -41,7 +41,7 @@ defmodule LibclusterEc2TagStrategy.MixProject do
       maintainers: ["Mika Kalathil"],
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/MikaAK/libcluster_ec2_tag_strategy"},
-      files: ~w(mix.exs README.md CHANGELOG.md lib)
+      files: ~w(mix.exs README.md CHANGELOG.md lib config)
     ]
   end
 
