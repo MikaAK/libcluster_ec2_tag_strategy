@@ -36,8 +36,18 @@ defmodule Cluster.Strategy.EC2Tag.Utils do
           :"#{name}@#{hostname}"
         end)}
 
+      {:error, :nxdomain} ->
+        Logger.debug("[Cluster.Strategy.EC2Tag] EPMD couldn't find the domain for #{hostname}")
+
+        {:ok, []}
+
       {:error, :address} ->
         Logger.debug("[Cluster.Strategy.EC2Tag] EPMD Not online yet for #{hostname}")
+
+        {:ok, []}
+
+      {:error, reason} ->
+        Logger.debug("[Cluster.Strategy.EC2Tag] EPMD error for #{hostname} - #{reason}")
 
         {:ok, []}
     end
