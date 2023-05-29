@@ -1,4 +1,7 @@
 # Changes
+## 0.1.3
+- update xml2map
+
 ## 0.1.2
 - fix: make sure we don't error on :net_adm errors and log better
 
