@@ -29,7 +29,7 @@ defmodule LibclusterEc2TagStrategy.MixProject do
       {:ex_aws_ec2, "~> 2.0"},
       {:jason, "~> 1.4"},
       {:hackney, "~> 1.9"},
-      {:elixir_xml_to_map, "~> 2.0"},
+      {:elixir_xml_to_map, "~> 3.0"},
       {:error_message, "~> 0.2"},
 
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
