@@ -65,7 +65,12 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
   defp handle_describe_response({:ok, %{body: body}}) do
     case XmlToMap.naive_map(body) do
       %{"DescribeInstancesResponse" => %{"reservationSet" => %{"item" => items}}} ->
-        {:ok, Enum.map(items, fn %{"instancesSet" => %{"item" => item}} -> item end)}
+        instances =
+          items
+          |> Enum.flat_map(fn %{"instancesSet" => %{"item" => item}} -> List.wrap(item) end)
+          |> Enum.reject(&terminated_instance?/1)
+
+        {:ok, instances}
 
       structure ->
         {:error, ErrorMessage.bad_request(
@@ -74,4 +79,7 @@ defmodule Cluster.Strategy.EC2Tag.AwsInstanceFetcher do
         )}
     end
   end
+
+  defp terminated_instance?(%{"instanceState" => %{"name" => "terminated"}}), do: true
+  defp terminated_instance?(_), do: false
 end
