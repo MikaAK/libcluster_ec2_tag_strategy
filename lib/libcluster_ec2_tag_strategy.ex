@@ -81,8 +81,8 @@ defmodule Cluster.Strategy.EC2Tag do
          {:ok, nodes} <- Utils.fetch_instances_from_hosts(hosts) do
       nodes = maybe_filter_node_names(nodes, config[:filter_node_name])
       now = System.monotonic_time(:millisecond)
-      blacklist = Blacklist.prune(blacklist, nodes)
-      {allowed, blocked} = Blacklist.partition(blacklist, nodes, now)
+      blacklist = Blacklist.drop_undiscovered_nodes(blacklist, nodes)
+      {allowed, blocked} = Blacklist.split_into_allowed_and_blocked(blacklist, nodes, now)
 
       if not Enum.empty?(blocked) do
         Logger.debug("[Cluster.Strategy.EC2Tag] Skipping blacklisted nodes: #{inspect(blocked)}")
@@ -94,7 +94,7 @@ defmodule Cluster.Strategy.EC2Tag do
           {:error, bad_nodes} -> Enum.map(bad_nodes, fn {node, _reason} -> node end)
         end
 
-      Blacklist.record(blacklist, allowed, failed_nodes, now,
+      Blacklist.record_connect_results(blacklist, allowed, failed_nodes, now,
         threshold: config[:connect_failure_threshold] || @default_connect_failure_threshold,
         retry_interval: config[:blacklist_retry_interval] || @default_blacklist_retry_interval
       )

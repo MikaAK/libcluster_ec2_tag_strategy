@@ -31,7 +31,7 @@ defmodule Cluster.Strategy.EC2Tag.Blacklist do
   Drops tracking state for nodes that are no longer discovered, so the maps
   cannot grow unbounded as instances come and go.
   """
-  def prune(%__MODULE__{failures: failures, blacklist: blacklist}, discovered_nodes) do
+  def drop_undiscovered_nodes(%__MODULE__{failures: failures, blacklist: blacklist}, discovered_nodes) do
     %__MODULE__{
       failures: Map.take(failures, discovered_nodes),
       blacklist: Map.take(blacklist, discovered_nodes)
@@ -42,7 +42,7 @@ defmodule Cluster.Strategy.EC2Tag.Blacklist do
   Splits candidate nodes into `{allowed, blocked}`. Blacklisted nodes whose
   retry time has passed are allowed through as probes.
   """
-  def partition(%__MODULE__{blacklist: blacklist}, nodes, now) do
+  def split_into_allowed_and_blocked(%__MODULE__{blacklist: blacklist}, nodes, now) do
     Enum.split_with(nodes, fn node ->
       case Map.get(blacklist, node) do
         nil -> true
@@ -62,19 +62,19 @@ defmodule Cluster.Strategy.EC2Tag.Blacklist do
     * `:retry_interval` - milliseconds a blacklisted node is skipped before
       the next probe.
   """
-  def record(%__MODULE__{} = tracker, attempted, failed_nodes, now, opts) do
+  def record_connect_results(%__MODULE__{} = tracker, attempted, failed_nodes, now, opts) do
     failed = MapSet.new(failed_nodes)
 
     Enum.reduce(attempted, tracker, fn node, acc ->
       if MapSet.member?(failed, node) do
-        record_failure(acc, node, now, opts[:threshold], opts[:retry_interval])
+        count_failure_and_maybe_blacklist(acc, node, now, opts[:threshold], opts[:retry_interval])
       else
-        clear(acc, node)
+        clear_node_tracking(acc, node)
       end
     end)
   end
 
-  defp record_failure(tracker, node, now, threshold, retry_interval) do
+  defp count_failure_and_maybe_blacklist(tracker, node, now, threshold, retry_interval) do
     count = Map.get(tracker.failures, node, 0) + 1
     tracker = %{tracker | failures: Map.put(tracker.failures, node, count)}
 
@@ -89,7 +89,7 @@ defmodule Cluster.Strategy.EC2Tag.Blacklist do
     end
   end
 
-  defp clear(tracker, node) do
+  defp clear_node_tracking(tracker, node) do
     %__MODULE__{
       failures: Map.delete(tracker.failures, node),
       blacklist: Map.delete(tracker.blacklist, node)
