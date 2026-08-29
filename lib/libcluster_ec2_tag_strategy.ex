@@ -7,12 +7,14 @@ defmodule Cluster.Strategy.EC2Tag do
 
   alias Cluster.Strategy.State
 
-  alias Cluster.Strategy.EC2Tag.{Utils, AwsInstanceFetcher}
+  alias Cluster.Strategy.EC2Tag.{Utils, AwsInstanceFetcher, Blacklist}
 
   @default_interval :timer.seconds(5)
+  @default_connect_failure_threshold 5
+  @default_blacklist_retry_interval :timer.minutes(1)
 
   def start_link([]) do
-    Logger.warn("No topologies setup for LibCluster EC2Tag strategy")
+    Logger.warning("No topologies setup for LibCluster EC2Tag strategy")
 
     :ignore
   end
@@ -24,11 +26,11 @@ defmodule Cluster.Strategy.EC2Tag do
 
     case Enum.find(topologies, &current_node_in_tag?/1) do
       nil ->
-        Logger.warn("[Cluster.Strategy.EC2Tag] Current node doesn't have any tag name/value pairs that match one of the topologies")
+        Logger.warning("[Cluster.Strategy.EC2Tag] Current node doesn't have any tag name/value pairs that match one of the topologies")
 
         :ignore
 
-      topology -> Task.start_link(fn -> run_loop(topology) end)
+      topology -> Task.start_link(fn -> run_loop(topology, Blacklist.new()) end)
     end
   end
 
@@ -62,11 +64,11 @@ defmodule Cluster.Strategy.EC2Tag do
     end
   end
 
-  defp run_loop(%State{config: config} = state) do
-    attempt_to_connect_to_hosts_by_tag(state)
+  defp run_loop(%State{config: config} = state, blacklist) do
+    blacklist = attempt_to_connect_to_hosts_by_tag(state, blacklist)
 
     Process.sleep(config[:check_interval] || @default_interval)
-    run_loop(state)
+    run_loop(state, blacklist)
   end
 
   defp attempt_to_connect_to_hosts_by_tag(%State{
@@ -74,16 +76,38 @@ defmodule Cluster.Strategy.EC2Tag do
     topology: topology,
     connect: connect,
     list_nodes: list_nodes
-  }) do
+  }, blacklist) do
     with {:ok, hosts} <- find_hosts_by_tag_for_config(config),
          {:ok, nodes} <- Utils.fetch_instances_from_hosts(hosts) do
-      Cluster.Strategy.connect_nodes(topology, connect, list_nodes, maybe_filter_node_names(nodes, config[:filter_node_name]))
+      nodes = maybe_filter_node_names(nodes, config[:filter_node_name])
+      now = System.monotonic_time(:millisecond)
+      blacklist = Blacklist.prune(blacklist, nodes)
+      {allowed, blocked} = Blacklist.partition(blacklist, nodes, now)
+
+      if not Enum.empty?(blocked) do
+        Logger.debug("[Cluster.Strategy.EC2Tag] Skipping blacklisted nodes: #{inspect(blocked)}")
+      end
+
+      failed_nodes =
+        case Cluster.Strategy.connect_nodes(topology, connect, list_nodes, allowed) do
+          :ok -> []
+          {:error, bad_nodes} -> Enum.map(bad_nodes, fn {node, _reason} -> node end)
+        end
+
+      Blacklist.record(blacklist, allowed, failed_nodes, now,
+        threshold: config[:connect_failure_threshold] || @default_connect_failure_threshold,
+        retry_interval: config[:blacklist_retry_interval] || @default_blacklist_retry_interval
+      )
     else
       {:ok, []} ->
         Logger.error("[Cluster.Strategy.EC2Tag] Cannot find hosts to connect to with the tag name of #{config[:tag_name]} and the value of #{config[:tag_value]}")
 
+        blacklist
+
       {:error, e} ->
         Logger.error("[Cluster.Strategy.EC2Tag] Error finding hosts for #{config[:tag_name]} with value of #{config[:tag_value]}\n#{inspect e, pretty: true}")
+
+        blacklist
     end
   end
 

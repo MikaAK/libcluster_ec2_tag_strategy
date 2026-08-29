@@ -81,3 +81,32 @@ defmodule MyHelper do
   end
 end
 ```
+
+## Connect-failure blacklist
+
+Nodes that repeatedly fail to connect (wrong Erlang cookie, blocked
+distribution port, foreign cluster sharing the same EC2 tag) are temporarily
+blacklisted instead of being re-dialed every poll cycle. This prevents log
+floods from rejected handshakes and keeps `:global`'s overlapping-partition
+prevention from churning on permanently half-connected nodes.
+
+After `:connect_failure_threshold` consecutive failures (default `5`) a node
+is skipped for `:blacklist_retry_interval` ms (default one minute), then
+probed again — one failed probe re-blacklists it, a successful connect clears
+it. Blacklisting only gates outbound dial attempts; established connections
+are never touched.
+
+```elixir
+config :libcluster, :topologies,
+  my_nodes: [
+    strategy: Cluster.Strategy.EC2Tag,
+    config: [
+      tag_name: "Group",
+      tag_value: "My Backend",
+
+      # optional — defaults shown
+      connect_failure_threshold: 5,          # :infinity disables blacklisting
+      blacklist_retry_interval: :timer.minutes(1)
+    ]
+  ]
+```
